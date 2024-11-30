@@ -22,12 +22,47 @@ Devvit.addSettings([
   },
 ]);
 
+const ResultForm = Devvit.createForm({
+  fields: [
+    {name: 'userna', type: 'string', label: 'Username'},
+    {name: 'id', type: 'string', label: 'User Id'},
+    {name: 'DayofCreation', type: 'string', label: 'DoC'},
+    {name: 'linkKarma', type: 'string', label: 'lK'},
+    {name: 'commentKarma', type: 'string', label: 'cK'},
+    {name: 'recentHistory', type: 'string', label: 'rH'},
+  ],
+  title: 'Results',
+  acceptLabel: 'Close',
+  cancelLabel: '',
+},
+(event, context) =>{
+  console.log('Form closed');
+}
+);
+
 async function getUserInfo(username: string, context: Devvit.Context){
   try {
     const user= await context.reddit.getUserByUsername(username);
     if (user){
-      context.ui.showToast(`Found User: '${user.username}'`);
-      console.log(`Found User: '${user.username}'`);
+      const recentHist =await context.reddit.getCommentsAndPostsByUser({username: user.username, limit:10});
+      let histString = '';
+      for await (const item of recentHist){
+        if('body' in item){
+          histString += `Comment: ${item.body.substring(0,50) || '[No content]'}...\n`;
+        }
+        else if('title' in item){
+          histString+=`Post: ${item.title} - ${item.createdAt.toLocaleString()}\n`;
+        }
+      }
+      context.ui.showForm(ResultForm,{
+        userna: user.username,
+        id: user.id,
+        DayofCreation: new Date(user.createdAt).toLocaleString(),
+        linkKarma: user.linkKarma.toString(),
+        commentKarma: user.commentKarma.toString(),
+        recentHistory: histString,
+      });
+      console.log(`Found User: '${user.username}', '${user.linkKarma.toString()}', '${user.id}', '${new Date(user.createdAt).toLocaleString()}', '${user.commentKarma.toString()}','${histString}'`);
     }
     else{
       context.ui.showToast(`Cannot Find User: '${username}'`);
