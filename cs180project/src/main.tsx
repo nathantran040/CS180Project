@@ -22,6 +22,7 @@ Devvit.addSettings([
   },
 ]);
 
+//Gets the information from Reddit 
 const ResultForm = Devvit.createForm({
   fields: [
     {name: 'userna', type: 'string', label: 'Username'},
@@ -40,20 +41,23 @@ const ResultForm = Devvit.createForm({
 }
 );
 
+//Condenses the information of a given user
 async function getUserInfo(username: string, context: Devvit.Context){
   try {
     const user= await context.reddit.getUserByUsername(username);
     if (user){
       const recentHist =await context.reddit.getCommentsAndPostsByUser({username: user.username, limit:10});
       let histString = '';
+      //extracts the most recent posts and comments from the user (Text only since we're not doing image analysis)
       for await (const item of recentHist){
         if('body' in item){
-          histString += `Comment: ${item.body.substring(0,50) || '[No content]'}...\n`;
+          histString += `Comment: ${item.body.substring(0,100) || '[No content]'}...\n`;
         }
         else if('title' in item){
           histString+=`Post: ${item.title} - ${item.createdAt.toLocaleString()}\n`;
         }
       }
+      //Turns the user information parts that are not strings into strings so we can print them
       context.ui.showForm(ResultForm,{
         userna: user.username,
         id: user.id,
@@ -62,19 +66,30 @@ async function getUserInfo(username: string, context: Devvit.Context){
         commentKarma: user.commentKarma.toString(),
         recentHistory: histString,
       });
-      console.log(`Found User: '${user.username}', '${user.linkKarma.toString()}', '${user.id}', '${new Date(user.createdAt).toLocaleString()}', '${user.commentKarma.toString()}','${histString}'`);
+      //prints the user information into th econsole 
+      console.log(`Found User: '${user.username}',\n Link Karma:'${user.linkKarma.toString()}', \n User ID: '${user.id}',\n Account Birthday: '${new Date(user.createdAt).toLocaleString()}'\n Comment Karma: '${user.commentKarma.toString()}',\n10 most recent posts:\n'${histString}'`);
+      if(histString.includes("Kyle Hill")){
+        console.log('\n*******************\n The user likes Kyle Hill');
+      }
+      else{
+        console.log("The includes function is not working as expected");
+      }
+
     }
+    //Checks if the user was found 
     else{
       context.ui.showToast(`Cannot Find User: '${username}'`);
       console.log(`Cannot Find User: '${username}'`);
     } 
   } 
+  //Cathes other errors
   catch(error){
     context.ui.showToast(`Error with User: '${username}' '${error}'`);
     console.log(`Error with User: '${username}' '${error}'`);
   }
 }
 
+//This is the reddit application part
 const trackingForm = Devvit.createForm(
   {
     fields: [{ name: 'user', label: 'Enter a User: (Do not include u/', type: 'string' }],
@@ -88,6 +103,7 @@ const trackingForm = Devvit.createForm(
   }
 );
 
+//This adds the app to the reddit menu
 Devvit.addMenuItem({
   location: 'subreddit',
   label: 'Track a User',
